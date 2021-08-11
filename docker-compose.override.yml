@@ -1,0 +1,14 @@
+volumes: 
+     app_node_modules:
+     app_vendor:
+
+services:
+    web:
+      image: jorge.paz/php-demo:development-curso
+      build: 
+          context:
+          dockerfile: Dockerfile
+      volumes: 
+          - .:/var/www/html #Funciona para copiar todos los archivos
+          - app_node_modules:/var/www/html/node_modules #Funciona para no copiar el contenido de esa carpeta
+          - app_vendor:/var/www/html/vendor #Funciona para no copiar el contenido de esa carpeta
