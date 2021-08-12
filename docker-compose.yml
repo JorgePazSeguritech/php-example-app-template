@@ -19,7 +19,7 @@ services:
             - mysql_data:/var/lib/mysql
 
         environment: 
-            MYSQL:USER: root #demo
+            MYSQL:USER: demo #root 
             MYSQL_PASSWORD: p4ssw0rd
             MYSQL_DATABASE: demo_development
             MYSQL_ROOT_PASSWORD: p4ssw0rd

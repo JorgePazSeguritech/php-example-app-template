@@ -66,3 +66,58 @@ RUN ln -s /opt/yarn/bin/yarn /usr/local/bin/yarn \
 
 #install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
+
+WORKDIR /var/www/html
+# Recibir el ID y el nombre del usuario desarrollador
+ARG DEVELOPER_UID=1000
+ARG DEVELOPER_USER=developer
+
+# Replicar el usuario dentro del container
+RUN addgroup --gid ${DEVELOPER_UID} ${DEVELOPER_USER} \
+ ;  useradd -r -m -u ${DEVELOPER_UID} --gid ${DEVELOPER_UID} \
+    --shell /bin/bash -c "Developer User,,," ${DEVELOPER_USER}
+
+# Instalar Dependencias de la app ===============================
+COPY package*.json /var/www/html/
+RUN npm install
+
+COPY composer.* /var/www/html/
+RUN composer install --no-scripts --no-interaction --prefer-dist
+
+# Cambiarse al usuario "root" para instalar las dependencias (incluyendo sudo)
+USER root
+
+# Instalar sudo, junto con otras dependencias que se requieren durante la fase
+# de desarrollo:
+RUN apt-get install -y --no-install-recommends \
+  # Adding bash autocompletion as git without autocomplete is a pain...
+  bash-completion \
+  # gpg & gpgconf is used to get Git Commit GPG Signatures working inside the
+  # VSCode devcontainer:
+  gpg \
+  # Para trabajar con la base de datos desde el contenedor de desarrollo:
+  mariadb-client \
+  # Para esperar a que el servicio de minio (u otros) esté disponible:
+  netcat \
+  # /proc file system utilities: (watch, ps):
+  procps \
+  # Vim will be used to edit files when inside the container (git, etc):
+  vim \
+  # Sudo will be used to install/configure system stuff if needed during dev:
+  sudo
+
+  # Agregar el usuario desarrollador a la lista de sudoers:
+RUN echo "${DEVELOPER_USER} ALL=(ALL) NOPASSWD:ALL" | tee "/etc/sudoers.d/${DEVELOPER_USER}"
+
+# Persistir el historial de bash entre corridas
+# - Ver https://code.visualstudio.com/docs/remote/containers-advanced#_persist-bash-history-between-runs
+RUN SNIPPET="export PROMPT_COMMAND='history -a' && export HISTFILE=/command-history/.bash_history" \
+    && mkdir /command-history \
+    && touch /command-history/.bash_history \
+    && chown -R ${DEVELOPER_USER} /command-history \
+    && echo $SNIPPET >> "/home/${DEVELOPER_USER}/.bashrc"
+
+# Cambiar al usuario desarrollador:
+USER ${DEVELOPER_USER}
+
+
